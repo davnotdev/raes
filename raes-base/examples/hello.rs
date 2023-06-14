@@ -1,7 +1,7 @@
 use raes_base::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 struct HelloScene {
     number: f32,
 }

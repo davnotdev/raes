@@ -1,5 +1,5 @@
 use super::{Scene, SceneExit};
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 
 mod args;
@@ -8,7 +8,10 @@ mod args;
 mod fs_platform;
 
 use args::parse_arguments;
-use fs_platform::{fs_platform_get_args, fs_platform_get_config_str, fs_platform_load_scene_str};
+use fs_platform::{
+    fs_platform_get_args, fs_platform_get_config_str, fs_platform_load_scene_str,
+    fs_platform_write_scene,
+};
 
 const MOUNT_ROOT_CONFIG_FILE_NAME: &str = "raes.ron";
 
@@ -21,6 +24,8 @@ pub enum EngineError {
     MountSearchRootNotFoundNearby,
     MountAmbiguousRoots(Vec<String>),
     SceneLoadIO(std::io::Error),
+    SceneWriteIO(std::io::Error),
+    SceneNotFound,
     SceneParse(String),
     ParseConfig(String),
     SceneNotAdded(String),
@@ -40,10 +45,16 @@ struct EngineConfig {
 }
 
 type SceneLoader = fn(&str) -> Result<Box<dyn Scene>, EngineError>;
+type SceneDefaultWrite = fn(&str) -> Result<Box<dyn Scene>, EngineError>;
+
+struct SceneData {
+    loader: SceneLoader,
+    default_write: SceneDefaultWrite,
+}
 
 pub struct Engine {
     config: EngineConfig,
-    scenes: HashMap<String, SceneLoader>,
+    scenes: HashMap<String, SceneData>,
 }
 
 impl Engine {
@@ -63,16 +74,27 @@ impl Engine {
         Ok(Engine { config, scenes })
     }
 
-    pub fn add_scene<S: Scene + DeserializeOwned + 'static>(
+    pub fn add_scene<S: Scene + Serialize + DeserializeOwned + Default + 'static>(
         &mut self,
         scene_names: &[&str],
     ) -> &mut Self {
         for &scene_name in scene_names {
-            self.scenes.insert(String::from(scene_name), |s| {
-                let s: S =
-                    ron::from_str(s).map_err(|e| EngineError::SceneParse(format!("{}", e)))?;
-                Ok(Box::new(s))
-            });
+            self.scenes.insert(
+                String::from(scene_name),
+                SceneData {
+                    loader: |s| {
+                        let s: S = ron::from_str(s)
+                            .map_err(|e| EngineError::SceneParse(format!("{}", e)))?;
+                        Ok(Box::new(s))
+                    },
+                    default_write: |scene_location| {
+                        let s_default = S::default();
+                        let s = ron::to_string(&s_default).unwrap();
+                        fs_platform_write_scene(scene_location, &s)?;
+                        Ok(Box::new(s_default))
+                    },
+                },
+            );
         }
         self
     }
@@ -82,14 +104,21 @@ impl Engine {
     }
 
     pub fn run_scene(&mut self, scene: &str) -> Result<Option<String>, EngineError> {
-        let scene_loader = self
+        let scene_data = self
             .scenes
             .get(scene)
             .ok_or(EngineError::SceneNotAdded(String::from(scene)))?;
 
-        let s = fs_platform_load_scene_str(scene)?;
-
-        let mut scene = scene_loader(&s)?;
+        let mut scene = match fs_platform_load_scene_str(scene) {
+            Ok(scene) => (scene_data.loader)(&scene)?,
+            Err(e) => {
+                if let EngineError::SceneNotFound = e {
+                    (scene_data.default_write)(scene)?
+                } else {
+                    Err(e)?
+                }
+            }
+        };
         let res = match scene.run().map_err(EngineError::SceneError)? {
             SceneExit::End => None,
             SceneExit::Next(next) => Some(next),

@@ -1,5 +1,5 @@
 use super::*;
-use std::{env, fs, path};
+use std::{env, fs, io, path};
 
 pub(super) fn fs_platform_get_args() -> Result<EngineArgs, EngineError> {
     let args = env::args().skip(1).collect::<Vec<_>>();
@@ -22,7 +22,17 @@ pub(super) fn fs_platform_get_config_str(args: &EngineArgs) -> Result<String, En
 }
 
 pub fn fs_platform_load_scene_str(scene: &str) -> Result<String, EngineError> {
-    fs::read_to_string(scene).map_err(EngineError::SceneLoadIO)
+    fs::read_to_string(scene).map_err(|e| {
+        if let io::ErrorKind::NotFound = e.kind() {
+            EngineError::SceneNotFound
+        } else {
+            EngineError::SceneLoadIO(e)
+        }
+    })
+}
+
+pub fn fs_platform_write_scene(scene_location: &str, scene: &str) -> Result<(), EngineError> {
+    fs::write(scene_location, scene).map_err(EngineError::SceneWriteIO)
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
