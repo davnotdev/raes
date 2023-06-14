@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Row<T, const MAX_ENTITIES: usize = DEFAULT_MAX_ENTITIES> {
     datas: [T; MAX_ENTITIES],
 }
