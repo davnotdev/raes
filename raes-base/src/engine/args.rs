@@ -10,12 +10,13 @@ pub(super) fn parse_arguments(args: &[String]) -> Result<EngineArgs, EngineIgnit
     let mut output = EngineArgs::default();
     let mut previous_carried_flag = None;
     for arg in args {
-        if let Some(ref previous_carried_flag) = previous_carried_flag {
-            match previous_carried_flag {
+        if let Some(ref previous_carried) = previous_carried_flag {
+            match previous_carried {
                 EngineFlags::Scene => output.scene = Some(arg.clone()),
                 EngineFlags::MountPath => output.mount_path = Some(arg.clone()),
                 EngineFlags::SearchMountName => output.search_mount_name = Some(arg.clone()),
             }
+            previous_carried_flag = None;
         } else {
             match arg.as_str() {
                 "--scene" | "-s" => {

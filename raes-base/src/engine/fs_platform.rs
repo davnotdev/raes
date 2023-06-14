@@ -1,28 +1,46 @@
 use super::*;
-use std::{fs, path};
+use std::{env, fs, path};
+
+pub fn fs_platform_ignite() -> Result<Engine, EngineIgniteError> {
+    let args = env::args().skip(1).collect::<Vec<_>>();
+    let args = parse_arguments(&args)?;
+
+    let mount_path = if let Some(mount_path) = args.mount_path {
+        mount_path
+    } else {
+        find_mount_path(&args.search_mount_name)?
+    };
+
+    env::set_current_dir(&mount_path).unwrap();
+
+    let mut config_path = path::PathBuf::from(mount_path);
+    config_path.push(MOUNT_ROOT_CONFIG_FILE_NAME);
+
+    let config_str = fs::read_to_string(config_path).map_err(EngineIgniteError::MountSearchIO)?;
+
+    let config: EngineConfig =
+        ron::from_str(&config_str).map_err(|e| EngineIgniteError::ParseConfig(format!("{}", e)))?;
+
+    Ok(Engine { config })
+}
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 struct Distance(usize);
 
 const MAX_DISTANCE: usize = 15;
 
-pub fn find_mount_path(
-    search_mount_name: &Option<String>,
-) -> Result<Vec<String>, EngineIgniteError> {
-    let mut current_path = std::env::current_dir().map_err(EngineIgniteError::MountSearchIO)?;
+fn find_mount_path(search_mount_name: &Option<String>) -> Result<String, EngineIgniteError> {
+    let mut current_path = env::current_dir().map_err(EngineIgniteError::MountSearchIO)?;
     let mut distance = Distance(1);
 
     loop {
-        let mut report = explore_path(&current_path, distance, search_mount_name)?;
+        let report = explore_path(&current_path, distance, search_mount_name)?;
         if !report.is_empty() {
-            report.sort_by(|a, b| a.1 .0.cmp(&b.1 .0));
-
-            let lowest_distance = report.first().unwrap().1;
-
-            return Ok(report
-                .into_iter()
-                .filter_map(|(path, distance)| (lowest_distance == distance).then_some(path))
-                .collect());
+            if report.len() != 1 {
+                let err = report.iter().cloned().map(|(i, _)| i).collect();
+                Err(EngineIgniteError::MountAmbiguousRoots(err))?
+            }
+            return Ok(report.first().unwrap().0.clone());
         }
 
         distance.0 += 1;

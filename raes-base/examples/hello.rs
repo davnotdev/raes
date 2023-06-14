@@ -1,5 +1,6 @@
 use raes_base::*;
 
 fn main() {
-    Engine::ignite().unwrap();
+    let engine = Engine::ignite().unwrap();
+    eprintln!("{:?}", engine);
 }

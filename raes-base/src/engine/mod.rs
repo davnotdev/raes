@@ -1,10 +1,12 @@
 use serde::Deserialize;
 
 mod args;
-mod mount;
+
+/// Implementations for platforms that have a filesystem.
+mod fs_platform;
 
 use args::parse_arguments;
-use mount::find_mount_path;
+use fs_platform::fs_platform_ignite;
 
 const MOUNT_ROOT_CONFIG_FILE_NAME: &str = "raes.ron";
 
@@ -15,23 +17,9 @@ pub enum EngineIgniteError {
     MountSearchIO(std::io::Error),
     MountSearchRootNotFound,
     MountSearchRootNotFoundNearby,
-}
+    MountAmbiguousRoots(Vec<String>),
 
-#[derive(Deserialize)]
-struct EngineConfig {}
-
-pub struct Engine {}
-
-impl Engine {
-    pub fn ignite() -> Result<Self, EngineIgniteError> {
-        let args = std::env::args().skip(1).collect::<Vec<_>>();
-        let args = parse_arguments(&args)?;
-
-        let res = find_mount_path(&args.search_mount_name).unwrap();
-        eprintln!("Ignition! {:?}", res);
-
-        todo!()
-    }
+    ParseConfig(String),
 }
 
 #[derive(Default)]
@@ -39,4 +27,20 @@ struct EngineArgs {
     mount_path: Option<String>,
     search_mount_name: Option<String>,
     scene: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct EngineConfig {
+    load_scene: String,
+}
+
+#[derive(Debug)]
+pub struct Engine {
+    config: EngineConfig,
+}
+
+impl Engine {
+    pub fn ignite() -> Result<Self, EngineIgniteError> {
+        fs_platform_ignite()
+    }
 }

@@ -1,0 +1,3 @@
+EngineConfig(
+    load_scene: "hello.ron",
+)
