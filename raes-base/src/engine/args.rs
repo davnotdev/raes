@@ -1,6 +1,6 @@
 use super::*;
 
-pub(super) fn parse_arguments(args: &[String]) -> Result<EngineArgs, EngineIgniteError> {
+pub(super) fn parse_arguments(args: &[String]) -> Result<EngineArgs, EngineError> {
     enum EngineFlags {
         Scene,
         MountPath,
@@ -28,7 +28,7 @@ pub(super) fn parse_arguments(args: &[String]) -> Result<EngineArgs, EngineIgnit
                 "--mount-path" | "-m" => {
                     previous_carried_flag = Some(EngineFlags::MountPath);
                 }
-                flag => Err(EngineIgniteError::BadArg(format!(
+                flag => Err(EngineError::IgniteBadArg(format!(
                     "Unrecognized flag: `{}`.",
                     flag
                 )))?,
@@ -37,7 +37,7 @@ pub(super) fn parse_arguments(args: &[String]) -> Result<EngineArgs, EngineIgnit
     }
 
     if previous_carried_flag.is_some() {
-        Err(EngineIgniteError::LeftOverArg)?
+        Err(EngineError::IgniteLeftOverArg)?
     }
 
     Ok(output)

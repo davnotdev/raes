@@ -1,12 +1,14 @@
 use super::*;
 use std::{env, fs, path};
 
-pub fn fs_platform_ignite() -> Result<Engine, EngineIgniteError> {
+pub(super) fn fs_platform_get_args() -> Result<EngineArgs, EngineError> {
     let args = env::args().skip(1).collect::<Vec<_>>();
-    let args = parse_arguments(&args)?;
+    parse_arguments(&args)
+}
 
-    let mount_path = if let Some(mount_path) = args.mount_path {
-        mount_path
+pub(super) fn fs_platform_get_config_str(args: &EngineArgs) -> Result<String, EngineError> {
+    let mount_path = if let Some(mount_path) = &args.mount_path {
+        mount_path.to_owned()
     } else {
         find_mount_path(&args.search_mount_name)?
     };
@@ -16,21 +18,20 @@ pub fn fs_platform_ignite() -> Result<Engine, EngineIgniteError> {
     let mut config_path = path::PathBuf::from(mount_path);
     config_path.push(MOUNT_ROOT_CONFIG_FILE_NAME);
 
-    let config_str = fs::read_to_string(config_path).map_err(EngineIgniteError::MountSearchIO)?;
+    fs::read_to_string(config_path).map_err(EngineError::MountSearchIO)
+}
 
-    let config: EngineConfig =
-        ron::from_str(&config_str).map_err(|e| EngineIgniteError::ParseConfig(format!("{}", e)))?;
-
-    Ok(Engine { config })
+pub fn fs_platform_load_scene_str(scene: &str) -> Result<String, EngineError> {
+    fs::read_to_string(scene).map_err(EngineError::SceneLoadIO)
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 struct Distance(usize);
 
-const MAX_DISTANCE: usize = 15;
+const MAX_DISTANCE: usize = 4;
 
-fn find_mount_path(search_mount_name: &Option<String>) -> Result<String, EngineIgniteError> {
-    let mut current_path = env::current_dir().map_err(EngineIgniteError::MountSearchIO)?;
+fn find_mount_path(search_mount_name: &Option<String>) -> Result<String, EngineError> {
+    let mut current_path = env::current_dir().map_err(EngineError::MountSearchIO)?;
     let mut distance = Distance(1);
 
     loop {
@@ -38,38 +39,38 @@ fn find_mount_path(search_mount_name: &Option<String>) -> Result<String, EngineI
         if !report.is_empty() {
             if report.len() != 1 {
                 let err = report.iter().cloned().map(|(i, _)| i).collect();
-                Err(EngineIgniteError::MountAmbiguousRoots(err))?
+                Err(EngineError::MountAmbiguousRoots(err))?
             }
             return Ok(report.first().unwrap().0.clone());
         }
 
         distance.0 += 1;
 
+        if distance.0 > MAX_DISTANCE {
+            Err(EngineError::MountSearchRootNotFoundNearby)?
+        }
+
         if !current_path.pop() {
             break;
         }
     }
 
-    Err(EngineIgniteError::MountSearchRootNotFound)
+    Err(EngineError::MountSearchRootNotFound)
 }
 
 fn explore_path(
     path: &path::Path,
     Distance(distance): Distance,
     search_mount_name: &Option<String>,
-) -> Result<Vec<(String, Distance)>, EngineIgniteError> {
-    if distance > MAX_DISTANCE {
-        Err(EngineIgniteError::MountSearchRootNotFoundNearby)?
-    }
-
+) -> Result<Vec<(String, Distance)>, EngineError> {
     let mut out = vec![];
-    let dirs = fs::read_dir(path).map_err(EngineIgniteError::MountSearchIO)?;
+    let dirs = fs::read_dir(path).map_err(EngineError::MountSearchIO)?;
 
     for item in dirs {
-        let item = item.map_err(EngineIgniteError::MountSearchIO)?;
+        let item = item.map_err(EngineError::MountSearchIO)?;
         let item_path = item.path();
         let item_name = item.file_name();
-        let item_type = item.file_type().map_err(EngineIgniteError::MountSearchIO)?;
+        let item_type = item.file_type().map_err(EngineError::MountSearchIO)?;
 
         if item_type.is_dir() && path != item_path {
             out.append(&mut explore_path(
