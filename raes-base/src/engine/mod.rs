@@ -1,8 +1,8 @@
-use super::{Scene, SceneExit};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
 
 mod args;
+mod scene;
 
 /// Implementations for platforms that have a filesystem.
 mod fs_platform;
@@ -12,6 +12,8 @@ use fs_platform::{
     fs_platform_get_args, fs_platform_get_config_str, fs_platform_load_scene_str,
     fs_platform_write_scene,
 };
+
+pub use scene::{IceBox, Preservable, Scene, SceneExit};
 
 const MOUNT_ROOT_CONFIG_FILE_NAME: &str = "raes.ron";
 
@@ -103,7 +105,11 @@ impl Engine {
         self.config.load_scene.clone()
     }
 
-    pub fn run_scene(&mut self, scene: &str) -> Result<Option<String>, EngineError> {
+    pub fn run_scene(
+        &mut self,
+        scene: &str,
+        icebox: IceBox,
+    ) -> Result<Option<(String, IceBox)>, EngineError> {
         let scene_data = self
             .scenes
             .get(scene)
@@ -119,9 +125,9 @@ impl Engine {
                 }
             }
         };
-        let res = match scene.run().map_err(EngineError::SceneError)? {
+        let res = match scene.run(icebox).map_err(EngineError::SceneError)? {
             SceneExit::End => None,
-            SceneExit::Next(next) => Some(next),
+            SceneExit::Next(next, icebox) => Some((next, icebox)),
         };
 
         Ok(res)

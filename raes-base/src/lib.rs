@@ -1,8 +1,8 @@
 mod cont;
 mod engine;
-mod scene;
+mod manual;
 
 pub use cont::{Cont, ContEntities, CopySwap, Entity, Row};
-pub use engine::{Engine, EngineError};
+pub use engine::{Engine, EngineError, IceBox, Preservable, Scene, SceneExit};
+pub use manual::Manual;
 pub use parking_lot::*;
-pub use scene::{Scene, SceneExit};
