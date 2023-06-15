@@ -1,5 +1,4 @@
-use raes_base::*;
-use raes_surface::*;
+use raes::{base::*, surface::*};
 use serde::{Deserialize, Serialize};
 
 fn main() {

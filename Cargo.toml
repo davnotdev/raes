@@ -1,6 +1,4 @@
 [workspace]
 members = [
-    "raes-base",
-    "raes-surface",
-    "examples/*",
+    "raes",
 ]
