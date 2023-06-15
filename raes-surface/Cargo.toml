@@ -1,0 +1,11 @@
+[package]
+name = "raes-surface"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+raw-window-handle = "0.5"
+raes-base = { version = "*", path = "../raes-base/" }
+winit = { version = "0.28", default-features = false, features = ["wayland-dlopen", "x11", "wayland"] }

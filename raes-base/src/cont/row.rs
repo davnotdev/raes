@@ -68,3 +68,13 @@ where
         Self { datas }
     }
 }
+
+impl<T, const MAX_ENTITIES: usize> Default for Row<T, MAX_ENTITIES>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        Self::new_with_default()
+    }
+}
+

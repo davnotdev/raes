@@ -77,3 +77,9 @@ impl<C: Cont, const MAX_ENTITIES: usize> ContEntities<C, MAX_ENTITIES> {
             .unwrap_or(false)
     }
 }
+
+impl<C: Cont> Default for ContEntities<C> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
