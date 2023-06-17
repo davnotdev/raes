@@ -96,9 +96,14 @@ impl Engine {
             self.scenes.insert(
                 String::from(scene_name),
                 SceneData {
-                    loader: |s| {
-                        let s: S = ron::from_str(s)
+                    loader: |scene_location| {
+                        //  Write back to the scene to ensure that new variables are merged in.
+                        let scene = fs_platform_load_scene_str(scene_location)?;
+                        let s: S = ron::from_str(&scene)
                             .map_err(|e| EngineError::SceneParse(format!("{}", e)))?;
+                        let write_back_s = ron_to_string(&s)
+                            .map_err(|e| EngineError::SceneParse(e.to_string()))?;
+                        fs_platform_write_scene(scene_location, &write_back_s)?;
                         Ok(Box::new(s))
                     },
                     default_write: |scene_location| {
@@ -128,8 +133,8 @@ impl Engine {
             .get(scene)
             .ok_or(EngineError::SceneNotAdded(String::from(scene)))?;
 
-        let mut scene = match fs_platform_load_scene_str(scene) {
-            Ok(scene) => (scene_data.loader)(&scene)?,
+        let mut scene = match (scene_data.loader)(scene) {
+            Ok(scene) => scene,
             Err(e) => {
                 if let EngineError::SceneNotFound = e {
                     (scene_data.default_write)(scene)?
