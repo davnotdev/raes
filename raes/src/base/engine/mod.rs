@@ -103,7 +103,8 @@ impl Engine {
                     },
                     default_write: |scene_location| {
                         let s_default = S::default();
-                        let s = ron::to_string(&s_default).unwrap();
+                        let s = ron_to_string(&s_default)
+                            .map_err(|e| EngineError::SceneParse(e.to_string()))?;
                         fs_platform_write_scene(scene_location, &s)?;
                         Ok(Box::new(s_default))
                     },
@@ -144,4 +145,13 @@ impl Engine {
 
         Ok(res)
     }
+}
+
+fn ron_to_string<S: Serialize + DeserializeOwned>(s: &S) -> Result<String, ron::Error> {
+    //  These settings should help fight merge conflicts.
+    let config = ron::ser::PrettyConfig::new()
+        .struct_names(true)
+        .separate_tuple_members(true)
+        .compact_arrays(false);
+    ron::ser::to_string_pretty(s, config)
 }
