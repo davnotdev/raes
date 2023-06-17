@@ -1,5 +1,4 @@
 use crate::base::*;
-use std::sync::Arc;
 
 mod event;
 mod winit_platform;
@@ -59,30 +58,21 @@ impl SurfaceCont {
 
 impl Preservable for SurfaceCont {}
 
-const DEFAULT_KEY_EVENT_BUFFER_COUNT: usize = 16;
-const DEFAULT_CLICK_EVENT_BUFFER_COUNT: usize = 4;
-const DEFAULT_RESIZE_EVENT_BUFFER_COUNT: usize = 2;
+const MAX_KEY_EVENT_COUNT: usize = 16;
+const MAX_CLICK_EVENT_COUNT: usize = 4;
+const MAX_RESIZE_EVENT_COUNT: usize = 2;
 
 #[derive(Debug, Clone, Copy)]
-pub struct SurfaceEdgeData<
-    const KEY_EVENT_BUFFER_COUNT: usize = DEFAULT_KEY_EVENT_BUFFER_COUNT,
-    const MOUSE_EVENT_BUFFER_COUNT: usize = DEFAULT_CLICK_EVENT_BUFFER_COUNT,
-    const RESIZE_EVENT_BUFFER_COUNT: usize = DEFAULT_RESIZE_EVENT_BUFFER_COUNT,
-> {
+pub struct SurfaceEdgeData {
     modifers: ModifierState,
     mouse_scroll: MouseScrollState,
     mouse_position: MousePositionState,
-    key_events: EventBuffer<KeyEvent, KEY_EVENT_BUFFER_COUNT>,
-    click_events: EventBuffer<ClickEvent, MOUSE_EVENT_BUFFER_COUNT>,
-    resize_events: EventBuffer<ResizeEvent, RESIZE_EVENT_BUFFER_COUNT>,
+    key_events: EventBuffer<KeyEvent, MAX_KEY_EVENT_COUNT>,
+    click_events: EventBuffer<ClickEvent, MAX_CLICK_EVENT_COUNT>,
+    resize_events: EventBuffer<ResizeEvent, MAX_RESIZE_EVENT_COUNT>,
 }
 
-impl<
-        const KEY_EVENT_BUFFER_COUNT: usize,
-        const MOUSE_EVENT_BUFFER_COUNT: usize,
-        const RESIZE_EVENT_BUFFER_COUNT: usize,
-    > SurfaceEdgeData<KEY_EVENT_BUFFER_COUNT, MOUSE_EVENT_BUFFER_COUNT, RESIZE_EVENT_BUFFER_COUNT>
-{
+impl SurfaceEdgeData {
     pub fn new() -> Self {
         Self {
             modifers: ModifierState::default(),

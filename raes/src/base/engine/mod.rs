@@ -1,5 +1,6 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::collections::HashMap;
+use thiserror::Error;
 
 mod args;
 mod scene;
@@ -17,21 +18,32 @@ pub use scene::{IceBox, Preservable, Scene, SceneExit};
 
 const MOUNT_ROOT_CONFIG_FILE_NAME: &str = "raes.ron";
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum EngineError {
+    #[error("At ignite: Got bad argument `{0}`.")]
     IgniteBadArg(String),
+    #[error("At ignite: Get ending flag without value.")]
     IgniteLeftOverArg,
+    #[error("While mounting: Got an IO error.")]
     MountSearchIO(std::io::Error),
+    #[error("While mounting: Project root not found.")]
     MountSearchRootNotFound,
+    #[error("While mounting: Project root not found (nearby).")]
     MountSearchRootNotFoundNearby,
+    #[error("While mounting: Found multiple project roots: `{0:?}`.")]
     MountAmbiguousRoots(Vec<String>),
+    #[error("While loading scene: Got an IO error.")]
     SceneLoadIO(std::io::Error),
+    #[error("While writing scene: Got an IO error.")]
     SceneWriteIO(std::io::Error),
+    #[error("SceneNotFound (This error should never be recieved.)")]
     SceneNotFound,
+    #[error("Scene parse error: `{0}`.")]
     SceneParse(String),
+    #[error("Engine config parse error: `{0}`.")]
     ParseConfig(String),
+    #[error("Loaded scene has not yet been added.")]
     SceneNotAdded(String),
-    SceneError(String),
 }
 
 #[derive(Default)]
@@ -60,7 +72,7 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn ignite() -> Result<Self, EngineError> {
+    pub fn ignite() -> anyhow::Result<Self> {
         let args = fs_platform_get_args()?;
         let config_str = fs_platform_get_config_str(&args)?;
 
@@ -109,7 +121,7 @@ impl Engine {
         &mut self,
         scene: &str,
         icebox: IceBox,
-    ) -> Result<Option<(String, IceBox)>, EngineError> {
+    ) -> anyhow::Result<Option<(String, IceBox)>> {
         let scene_data = self
             .scenes
             .get(scene)
@@ -125,7 +137,7 @@ impl Engine {
                 }
             }
         };
-        let res = match scene.run(icebox).map_err(EngineError::SceneError)? {
+        let res = match scene.run(icebox)? {
             SceneExit::End => None,
             SceneExit::Next(next, icebox) => Some((next, icebox)),
         };

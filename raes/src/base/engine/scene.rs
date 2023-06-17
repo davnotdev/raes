@@ -9,7 +9,7 @@ pub enum SceneExit {
 }
 
 pub trait Scene {
-    fn run(&mut self, icebox: IceBox) -> Result<SceneExit, String>;
+    fn run(&mut self, icebox: IceBox) -> anyhow::Result<SceneExit>;
 }
 
 pub trait Preservable {}
