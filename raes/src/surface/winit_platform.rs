@@ -51,7 +51,7 @@ impl Surface for WindowCont {
         self.window.inner_size().height as usize
     }
 
-    fn window_closed(&self) -> bool {
+    fn surface_closed(&self) -> bool {
         *self.window_closed.read()
     }
 

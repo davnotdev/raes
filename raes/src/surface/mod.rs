@@ -16,7 +16,7 @@ pub trait Surface {
     fn get_raw_window(&self) -> RawWindowHandle;
     fn get_width(&self) -> usize;
     fn get_height(&self) -> usize;
-    fn window_closed(&self) -> bool;
+    fn surface_closed(&self) -> bool;
     fn update(&mut self);
 }
 
@@ -28,6 +28,15 @@ impl SurfaceCont {
     pub fn new() -> Self {
         SurfaceCont {
             surface: Box::new(winit_platform::WindowCont::new()),
+        }
+    }
+
+    pub async fn wait_surface_closed(&self) {
+        loop {
+            if self.surface_closed() {
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         }
     }
 
@@ -47,8 +56,8 @@ impl SurfaceCont {
         self.surface.get_height()
     }
 
-    pub fn window_closed(&self) -> bool {
-        self.surface.window_closed()
+    pub fn surface_closed(&self) -> bool {
+        self.surface.surface_closed()
     }
 
     pub fn update(&mut self) {

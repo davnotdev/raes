@@ -44,9 +44,11 @@ impl Scene for HelloScene {
 
             let mut text = self.asset_edge.get_mut().load("./text.txt").await?;
 
-            while !self.surface.window_closed() {
-                let text = text.get_latest().await;
-                eprintln!("Text: {:?}", String::from_utf8(text.to_vec()).unwrap());
+            tokio::select! {
+                text = text.get_latest() => {
+                    eprintln!("Text: {:?}", String::from_utf8(text.to_vec()).unwrap());
+                }
+                _ = self.surface.wait_surface_closed() => {}
             }
 
             Ok(SceneExit::End)
